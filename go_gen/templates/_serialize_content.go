@@ -27,6 +27,6 @@
 :: # under the EPL.
 ::
 
-	if err := self.Content.SerializeTo(b, opts); err != nil {
+	if err := self.Content.Serialize(encoder); err != nil {
 		return err
 	}

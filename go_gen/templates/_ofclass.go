@@ -30,12 +30,15 @@
 :: import go_gen.oftype
 :: import go_gen.util as util
 :: import loxi_utils.loxi_utils as loxi_utils
-:: real_members = go_gen.oftype.oftype_unherited_members(ofclass)
 :: type_members = [m for m in ofclass.members if type(m) == OFTypeMember]
-:: has_content = go_gen.oftype.oftype_has_content(ofclass, real_members)
+:: has_content = go_gen.oftype.oftype_has_content(ofclass)
+::
+:: if ofclass.name == "of_bsn_header":
+::     import pdb; pdb.set_trace()
+:: #endif
 ::
 type ${ofclass.goname} struct {
-:: for m in real_members:
+:: for m in ofclass.unherited_members:
 ::     if type(m) != OFPadMember:
 ::         if ofclass.superclass and ofclass.superclass.member_by_name(m.name):
 ::             continue
@@ -53,7 +56,7 @@ type ${ofclass.goname} struct {
 :: #endfor
 ::
 :: if has_content:
-	Content Serializable
+	Content goloxi.Serializable
 :: #endif
 }
 ::
@@ -61,7 +64,7 @@ type ${ofclass.goname} struct {
 ::     for type_member in type_members:
 ::         if type_member.name == "type":
 
-func (self *${ofclass.goname}) MessageType() MessageType {
+func (self *${ofclass.goname}) MessageType() uint8 {
 	return ${type_member.value}
 }
 ::         #endif
@@ -69,13 +72,19 @@ func (self *${ofclass.goname}) MessageType() MessageType {
 :: #endif
 ::
 ::
-:: base_length = ofclass.base_length
-:: base_offset = real_members[0].offset if len(real_members) > 0 else 0
+:: base_length = ofclass.embedded_length
+:: base_offset = 0
+:: for member in ofclass.unherited_members:
+::     if type(member) != OFPadMember:
+::         base_offset = member.offset
+::         break
+::     #endif
+:: #endfor
+::
 :: if ofclass.superclass:
-::     base_length -= base_offset
+::     base_length -= (base_offset if len(ofclass.unherited_members) else ofclass.superclass.embedded_length)
 :: #endif
-:: if real_members:
-::     include('_serialize.go', ofclass=ofclass, members=real_members, base_length=base_length, base_offset=base_offset)
+::
+:: include('_serialize.go', ofclass=ofclass, members=ofclass.unherited_members, base_length=base_length, base_offset=base_offset)
 
-::     include('_decode.go', ofclass=ofclass, members=real_members, base_length=base_length, base_offset=base_offset)
-:: #endif
+:: include('_decode.go', ofclass=ofclass, members=ofclass.unherited_members, base_length=base_length, base_offset=base_offset)

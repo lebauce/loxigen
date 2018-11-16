@@ -26,27 +26,67 @@
 :: # EPL for the specific language governing permissions and limitations
 :: # under the EPL.
 ::
-:: from loxi_globals import OFVersions
-:: import py_gen.oftype
-:: include('_copyright.go')
 
-:: include('_autogen.go')
+package goloxi
 
-package ${package}
+import "github.com/google/gopacket"
 
-import (
-	"bytes"
-	"encoding/binary"
-	"net"
-
-	"github.com/google/gopacket"
-	"github.com/skydive-project/goloxi"
+const (
+:: for version in versions:
+${version.constant} = ${version.wire_version}
+:: #endfor
 )
 
-:: for i, ofclass in enumerate(ofclasses):
-::     if i != 0:
+type Serializable interface {
+	Serialize(encoder *Encoder) error
+	DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error
+}
 
-::     #endif
-:: include('_ofclass.go', ofclass=ofclass)
-::
-:: #endfor
+type Message interface {
+	Serializable
+	MessageType() uint8
+}
+
+type Encoder struct {
+	buffer *bytes.Buffer
+}
+
+func NewEncoder() *Encoder {
+	return &Encoder{
+		buffer: new(bytes.Buffer), 
+	}
+}
+
+func (e *Encoder) PutChar(c byte) {
+	e.buffer.WriteByte(c)
+}
+
+func (e *Encoder) PutUint8(i uint8) {
+	e.buffer.WriteByte(i)
+}
+
+func (e *Encoder) PutUint16(i uint16) {
+	var tmp [2]byte
+	binary.BigEndian.PutUint16(tmp[0:2], i)
+	e.buffer.Write(tmp[:])
+}
+
+func (e *Encoder) PutUint32(i uint32) {
+	var tmp [4]byte
+	binary.BigEndian.PutUint32(tmp[0:4], i)
+	e.buffer.Write(tmp[:])
+}
+
+func (e *Encoder) PutUint64(i uint64) {
+	var tmp [8]byte
+	binary.BigEndian.PutUint64(tmp[0:8], i)
+	e.buffer.Write(tmp[:])
+}
+
+func (e *Encoder) Write(b []byte) {
+	e.buffer.Write(b)
+}
+
+func (e *Encoder) Bytes() []byte {
+	return e.buffer.Bytes()
+}

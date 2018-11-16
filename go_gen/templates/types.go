@@ -28,39 +28,74 @@
 
 package ${package}
 
-import "github.com/google/gopacket"
+import (
+	"encoding/binary"
 
-type MessageType uint8
-type PortNo uint16
-type FmCmd uint16
-type FlowWildcards uint32
-type uint128_t struct {
+	"github.com/google/gopacket"
+	"github.com/skydive-project/goloxi"
+)
+
+// TODO: set real types
+:: if version.wire_version >= 3:
+type OXM = Oxm
+:: #endif
+type uint128 struct {
 	hi uint64
 	lo uint64
 }
 type Checksum128 [16]byte
-type Serializable interface {
-	SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error
-	DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error
+type Bitmap128 uint128
+type Bitmap512 struct {
+	a, b, c, d uint128
 }
-type Match = MatchV1
+type Unimplemented struct {}
+type BSNVport uint16
+type ControllerURI uint16
 
-// TODO: set real types
-type WcBmap uint32
-type BSNVport uint32
-
-func (c *Checksum128) Decode([]byte) error {
+:: fake_types = ["Checksum128", "Bitmap128", "Bitmap512", "BSNVport", "ControllerURI"]
+:: for fake_type in fake_types:
+func (self *${fake_type}) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	return nil
 }
 
-func (c *Checksum128) Serialize([]byte) error {
+func (self *${fake_type}) Serialize(encoder *goloxi.Encoder) error {
+	return nil
+}
+:: #endfor
+
+:: import loxi_ir.ir_offset as ir_offset
+:: import go_gen.util as util
+:: import loxi_globals
+::
+:: for name, v in ir_offset.of_mixed_types.items():
+::     if version.wire_version in v:
+::         goname = util.go_ident(name[:-2])
+::         gotype = base_type = v[version.wire_version][:-2]
+::         if gotype.startswith("of_"):
+::             gotype = util.go_ident(gotype)
+::         #endif
+::         if goname != gotype:
+::             ofproto = loxi_globals.ir[version]
+::             member_ofclass = ofproto.class_by_name(base_type)
+::             if not member_ofclass:
+type ${goname} ${gotype}
+
+func (self *${goname}) Serialize(encoder *goloxi.Encoder) error {
+	encoder.Put${util.go_ident(gotype)}(${gotype}(*self))
 	return nil
 }
 
-func (c *PortNo) Decode([]byte) error {
+func (self *${goname}) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+::                 if base_type == "uint8":
+	*self = ${goname}(data[0])
+::                 else:
+	*self = ${goname}(binary.BigEndian.${util.go_ident(gotype)}(data[:]))
+::                 #endif
 	return nil
 }
-
-func (c *PortNo) Serialize([]byte) error {
-	return nil
-}
+::             else:
+type ${goname} = ${gotype}
+::             #endif
+::         #endif
+::     #endif
+:: #endfor

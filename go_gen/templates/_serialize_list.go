@@ -28,7 +28,7 @@
 ::
 
 	for _, obj := range self.${member.goname} {
-		if err := obj.SerializeTo(data, df); err != nil {
+		if err := obj.Serialize(encoder); err != nil {
 			return err
 		}
 	}

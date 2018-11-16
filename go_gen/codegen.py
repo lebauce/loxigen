@@ -52,21 +52,31 @@ def generate_goname(ofclass):
         return "instruction", name
     return 'common', name
 
+def oftype_unherited_members(ofclass):
+    unherited = []
+    for i, member in enumerate(ofclass.members):
+        if hasattr(member, "name") and ofclass.superclass and ofclass.superclass.member_by_name(member.name):
+            continue
+        if hasattr(member, "oftype") and member.oftype == "of_octets_t" and ofclass.discriminator and i == len(ofclass.members) - 1:
+            continue
+        unherited.append(member)
+    return unherited
+
 # Create intermediate representation, extended from the LOXI IR
 def build_ofclasses(version):
     superclasses = {}
     field_lengths = {}
     modules = defaultdict(list)
+
+    # for ofclass in loxi_globals.ir[version].classes:
+    #     if ofclass.superclass:
+    #         subclasses = ofclass.superclass.__dict__.setdefault("subclasses", [])
+    #         subclasses.append(ofclass)
+
     for ofclass in loxi_globals.ir[version].classes:
-        # if version == loxi_globals.OFVersions.VERSION_1_5 and ofclass.name == "of_flow_mod":
-        #     import pdb; pdb.set_trace()
-        # elif version == loxi_globals.OFVersions.VERSION_1_5 and ofclass.name == "of_packet_out":
-        #     import pdb; pdb.set_trace()
-        # elif version == loxi_globals.OFVersions.VERSION_1_5 and ofclass.name == "of_flow_stats_entry":
+        # if version == loxi_globals.OFVersions.VERSION_1_5 and ofclass.goname == "AggregateStatsRequest":
         #     import pdb; pdb.set_trace()
         module_name, ofclass.goname = generate_goname(ofclass)
-        if version == loxi_globals.OFVersions.VERSION_1_5 and ofclass.goname == "AggregateStatsRequest":
-            import pdb; pdb.set_trace()
         ofclass.field_lengths = {}
         modules[module_name].append(ofclass)
         offset = 0
@@ -86,6 +96,14 @@ def build_ofclasses(version):
             if type(m) == loxi_ir.OFFieldLengthMember:
                 ofclass.field_lengths[m.name] = m.field_name
 
+        ofclass.unherited_members = oftype_unherited_members(ofclass)
+
+        ofclass.embedded_length = ofclass.base_length
+        if ofclass.virtual and len(ofclass.members):
+            member = ofclass.members[-1]
+            if type(member) == loxi_ir.OFPadMember:
+                ofclass.embedded_length -= member.pad_length
+
     return modules, superclasses
 
 def codegen(install_dir):
@@ -97,11 +115,13 @@ def codegen(install_dir):
         subprocess.call(["go", "fmt", os.path.join(install_dir, name)])
         subprocess.call(["goimports", "-w", os.path.join(install_dir, name)])
 
+    render('globals.go', versions=loxi_globals.OFVersions.all_supported)
+
     for version in loxi_globals.OFVersions.all_supported:
         subdir = 'of' + version.version.replace('.', '')
         modules, superclasses = build_ofclasses(version)
 
-        render(os.path.join(subdir, 'types.go'), package=subdir)
+        render(os.path.join(subdir, 'types.go'), package=subdir, version=version)
 
         render(os.path.join(subdir, 'const.go'), package=subdir, version=version,
                enums=loxi_globals.ir[version].enums)

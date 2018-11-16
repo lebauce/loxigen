@@ -31,10 +31,10 @@ from string import Template
 from generic_utils import find
 
 import loxi_utils.loxi_utils as loxi_utils
-import py_gen.codegen
 import loxi_globals
 import loxi_ir
 import loxi_ir.ir_offset as ir_offset
+import util
 
 OFTypeData = namedtuple("OFTypeData", ["name", "serialize", "unserialize"])
 
@@ -44,113 +44,113 @@ OFTypeData = namedtuple("OFTypeData", ["name", "serialize", "unserialize"])
 type_data_map = {
     'char': OFTypeData(
         name='byte',
-        serialize=Template('data[$offset] = $member'),
+        serialize=Template('encoder.PutChar($member)'),
         unserialize=Template('$member = data[$offset]')),
 
     'uint8_t': OFTypeData(
         name='uint8',
-        serialize=Template('data[$offset] = $member'),
+        serialize=Template('encoder.PutUint8($member)'),
         unserialize=Template('$member = data[$offset]')),
 
     'uint16_t': OFTypeData(
         name='uint16',
-        serialize=Template('binary.BigEndian.PutUint16(data[$offset:$offset+2], $member)'),
+        serialize=Template('encoder.PutUint16($member)'),
         unserialize=Template('$member = binary.BigEndian.Uint16(data[$offset:$offset+2])')),
 
     'uint32_t': OFTypeData(
         name='uint32',
-        serialize=Template('binary.BigEndian.PutUint32(data[$offset:$offset+4], $member)'),
+        serialize=Template('encoder.PutUint32($member)'),
         unserialize=Template('$member = binary.BigEndian.Uint32(data[$offset:$offset+4])')),
 
     'uint64_t': OFTypeData(
         name='uint64',
-        serialize=Template('binary.BigEndian.PutUint64(data[$offset:$offset+8], $member)'),
+        serialize=Template('encoder.PutUint64($member)'),
         unserialize=Template('$member = binary.BigEndian.Uint64(data[$offset:$offset+8])')),
 
     'uint128_t': OFTypeData(
         name='uint128',
-        serialize=Template('$member.Serialize(data[$offset:$offset+$length])'),
-        unserialize=Template('$member.Decode(data[$offset:$offset+$length])')),
+        serialize=Template('encoder.PutUint64($member.hi)\nencoder.PutUint64($member.lo)'),
+        unserialize=Template('$member.DecodeFromBytes(data[$offset:$offset+$length], df)')),
 
     'of_port_no_t': OFTypeData(
         name='PortNo',
-        serialize=Template('$member.Serialize(data[$offset:$offset+$length])'),
-        unserialize=Template('$member.Decode(data[$offset:$offset+$length])')),
+        serialize=Template('$member.Serialize(encoder)'),
+        unserialize=Template('$member.DecodeFromBytes(data[$offset:$offset+$length], df)')),
 
     'of_fm_cmd_t': OFTypeData(
         name='FmCmd',
-        serialize=Template('$member.Serialize(data[$offset:$offset+$length])'),
-        unserialize=Template('$member.Decode(data[$offset:$offset+$length])')),
+        serialize=Template('$member.Serialize(encoder)'),
+        unserialize=Template('$member.DecodeFromBytes(data[$offset:$offset+$length], df)')),
 
     'of_wc_bmap_t': OFTypeData(
         name='WcBmap',
-        serialize=Template('$member.Serialize(data[$offset:$offset+$length])'),
-        unserialize=Template('$member.Decode(data[$offset:$offset+$length])')),
+        serialize=Template('$member.Serialize(encoder)'),
+        unserialize=Template('$member.DecodeFromBytes(data[$offset:$offset+$length], df)')),
 
     'of_match_bmap_t': OFTypeData(
         name='MatchBmap',
-        serialize=Template('$member.Serialize(data[$offset:$offset+$length])'),
-        unserialize=Template('$member.Decode(data[$offset:$offset+$length])')),
+        serialize=Template('$member.Serialize(encoder)'),
+        unserialize=Template('$member.DecodeFromBytes(data[$offset:$offset+$length], df)')),
 
     'of_ipv4_t': OFTypeData(
         name='net.IP',
-        serialize=Template('copy(data[$offset:$offset+4], $member.To4())'),
+        serialize=Template('encoder.Write($member.To4())'),
         unserialize=Template('$member = net.IP(data[$offset:$offset+4])')),
 
     'of_ipv6_t': OFTypeData(
         name='net.IP',
-        serialize=Template('copy(data[$offset:$offset+16], $member.To6())'),
+        serialize=Template('encoder.Write($member.To16())'),
         unserialize=Template("$member = net.IP(data[$offset:$offset+16])")),
 
     'of_mac_addr_t': OFTypeData(
         name='net.HardwareAddr',
-        serialize=Template('copy(data[$offset:$offset+6], $member)'),
+        serialize=Template('encoder.Write($member)'),
         unserialize=Template("$member = net.HardwareAddr(data[$offset:$offset+6])")),
 
     'of_octets_t': OFTypeData(
         name='[]byte',
-        serialize=Template('copy(data[$offset:$offset+len($member)], $member)'),
+        serialize=Template('encoder.Write($member)'),
         unserialize=Template('copy($member, data[$offset:])')),
 
     'of_bitmap_128_t': OFTypeData(
         name='Bitmap128',
-        serialize=Template('$member.Serialize(data[$offset:$offset+$length])'),
-        unserialize=Template('$member.Decode(data[$offset:$offset+$length])')),
+        serialize=Template('$member.Serialize(encoder)'),
+        unserialize=Template('$member.DecodeFromBytes(data[$offset:$offset+$length], df)')),
 
     'of_oxm_t': OFTypeData(
         name='OXM',
-        serialize=Template('$member.Serialize(data[$offset:$offset+$length])'),
-        unserialize=Template('$member.Decode(data[$offset:$offset+$length])')),
+        serialize=Template('$member.Serialize(encoder)'),
+        unserialize=Template('$member.DecodeFromBytes(data[$offset:], df)')),
 
     'of_checksum_128_t': OFTypeData(
         name='Checksum128',
-        serialize=Template('$member.Serialize(data[$offset:$offset+$length])'),
-        unserialize=Template('$member.Decode(data[$offset:$offset+$length])')),
+        serialize=Template('$member.Serialize(encoder)'),
+        unserialize=Template('$member.DecodeFromBytes(data[$offset:$offset+$length], df)')),
 
     'of_bitmap_512_t': OFTypeData(
         name='Bitmap512',
-        serialize=Template('$member.Serialize(data[$offset:$offset+$length])'),
-        unserialize=Template('$member.Decode(data[$offset:$offset+$length])')),
+        serialize=Template('$member.Serialize(encoder)'),
+        unserialize=Template('$member.DecodeFromBytes(data[$offset:$offset+$length], df)')),
 
     'of_time_t': OFTypeData(
         name='Time',
-        serialize=Template('$member.Serialize(data[$offset:$offset+$length])'),
-        unserialize=Template('$member.Decode(data[$offset:$offset+$length])')),
+        serialize=Template('$member.Serialize(encoder)'),
+        unserialize=Template('$member.DecodeFromBytes(data[$offset:$offset+$length], df)')),
 
     'of_controller_uri_t': OFTypeData(
         name='ControllerURI',
-        serialize=Template('$member.Serialize(data[$offset:$offset+$length])'),
-        unserialize=Template('$member.Decode(data[$offset:$offset+$length])')),
+        serialize=Template('$member.Serialize(encoder)'),
+        unserialize=Template('$member.DecodeFromBytes(data[$offset:$offset+$length], df)')),
 
     'of_controller_status_entry_t': OFTypeData(
         name='ControllerStatusEntry',
-        serialize=Template('$member.Serialize(data[$offset:$offset+$length])'),
-        unserialize=Template('$member.Decode(data[$offset:$offset+$length])')),
+        serialize=Template('$member.Serialize(encoder)'),
+        unserialize=Template('$member.DecodeFromBytes(data[$offset:$offset+$length], df)')),
 
     'of_header_t': OFTypeData(
         name='Header',
-        serialize=Template('$member.Serialize(data[$offset:$offset+$length])'),
-        unserialize=Template('$member.Decode(data[$offset:$offset+$length])')),
+        serialize=Template('$member.Serialize(encoder)'),
+        unserialize=Template('$member.DecodeFromBytes(data[$offset:$offset+$length], df)')),
 }
 
 ## Fixed length strings
@@ -167,7 +167,7 @@ fixed_length_strings = {
 for (cls, length) in fixed_length_strings.items():
     type_data_map[cls] = OFTypeData(
         name="string",
-        serialize=Template('copy(data[$offset:$offset+%d], $member)' % length),
+        serialize=Template('encoder.Write([]byte($member))'),
         unserialize=Template('$member = string(bytes.Trim(data[$offset:$offset+%d], "\\x00"))' % length))
 
 ## Embedded structs
@@ -189,8 +189,8 @@ embedded_structs = {
 for (cls, gotype) in embedded_structs.items():
     type_data_map[cls] = OFTypeData(
         name=gotype,
-        serialize=Template('if err := $member.SerializeTo(data, df); err != nil {\n\t\treturn err\n\t}\n'),
-        unserialize=Template('if err := $member.DecodeFromBytes(data[$offset:]); err != nil {\n\t\treturn err\n\t}\n'))
+        serialize=Template('if err := $member.Serialize(encoder); err != nil {\n\t\treturn err\n\t}\n'),
+        unserialize=Template('if err := $member.DecodeFromBytes(data[$offset:], df); err != nil {\n\t\treturn err\n\t}\n'))
 
 ## Public interface
 
@@ -205,18 +205,15 @@ def oftype_list_elem(oftype):
     assert oftype.find("list(") == 0
     return oftype[5:-3]
 
-def oftype_unherited_members(ofclass):
-    unherited = []
-    for i, member in enumerate(ofclass.members):
-        if hasattr(member, "name") and ofclass.superclass and ofclass.superclass.member_by_name(member.name):
-            continue
-        if hasattr(member, "oftype") and member.oftype == "of_octets_t" and ofclass.discriminator and i == len(ofclass.members) - 1:
-            continue
-        unherited.append(member)
-    return unherited
-
-def oftype_has_content(ofclass, members):
-    return reduce(lambda x, y: x or (type(y) == loxi_ir.OFDiscriminatorMember and hasattr(y, "values")), members, False)
+def oftype_has_content(ofclass):
+    for member in ofclass.members:
+        if type(member) == loxi_ir.OFDiscriminatorMember and hasattr(member, "values"):
+            if ofclass.superclass:
+                super_member = ofclass.superclass.member_by_name(member.name)
+                if type(super_member) == loxi_ir.OFDiscriminatorMember:
+                    continue
+            return True
+    return False
 
 def oftype_get_length(ofclass, member, version):
     if member.is_fixed_length:
@@ -225,7 +222,7 @@ def oftype_get_length(ofclass, member, version):
     field_length_member = find(lambda m: type(m) == loxi_ir.OFFieldLengthMember and \
                                          m.field_name == member.name, ofclass.members)
     if field_length_member:
-        return field_length_member.name
+        return "self." + util.go_ident(field_length_member.name)
 
     member_type = member.oftype
     if member_type in ir_offset.of_mixed_types:
@@ -238,4 +235,4 @@ def oftype_get_length(ofclass, member, version):
         if member_type.is_fixed_length:
             return member_type.length
         elif member.length_member:
-            return member.length_member.name
+            return "self." + util.go_ident(member.length_member.name)

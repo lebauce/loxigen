@@ -34,21 +34,13 @@
 :: import loxi_utils.loxi_utils as loxi_utils
 ::
 
-func (self *${ofclass.goname}) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
-:: if base_length:
-	data, err := b.AppendBytes(${base_length})
-	if err != nil {
-		return err
-	}
-
-	:: #endif
-::
+func (self *${ofclass.goname}) Serialize(encoder *goloxi.Encoder) error {
 :: for member in members:
 ::     offset = member.offset - base_offset if member.offset else 0
 ::     length = go_gen.oftype.oftype_get_length(ofclass, member, version)
 ::
 ::     if type(member) == OFPadMember:
-	copy(data[${util.emit_range(start=offset, length=member.pad_length)}], bytes.Repeat([]byte{0}, ${member.pad_length}))
+	encoder.Write(bytes.Repeat([]byte{0}, ${member.pad_length}))
 ::     else:
 ::         member_name = "self." + member.goname
 ::         oftype = go_gen.oftype.lookup_type_data(member.oftype, version)
@@ -60,7 +52,6 @@ func (self *${ofclass.goname}) SerializeTo(b gopacket.SerializeBuffer, opts gopa
 ::             raise Exception("Unhandled member: %s" % (str(member)))
 ::         #endif
 ::     #endif
-::
 :: #endfor
 
 :: discriminator = ofclass.discriminator
