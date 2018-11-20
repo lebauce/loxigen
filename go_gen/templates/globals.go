@@ -39,7 +39,7 @@ ${version.constant} = ${version.wire_version}
 
 type Serializable interface {
 	Serialize(encoder *Encoder) error
-	DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error
+	Decode(data []byte) error
 }
 
 type Message interface {
@@ -49,6 +49,11 @@ type Message interface {
 
 type Encoder struct {
 	buffer *bytes.Buffer
+}
+
+type Uint128 struct {
+	Hi uint64
+	Lo uint64
 }
 
 func NewEncoder() *Encoder {
@@ -80,6 +85,13 @@ func (e *Encoder) PutUint32(i uint32) {
 func (e *Encoder) PutUint64(i uint64) {
 	var tmp [8]byte
 	binary.BigEndian.PutUint64(tmp[0:8], i)
+	e.buffer.Write(tmp[:])
+}
+
+func (e *Encoder) PutUint128(i Uint128) {
+	var tmp [16]byte
+	binary.BigEndian.PutUint64(tmp[0:8], i.Hi)
+	binary.BigEndian.PutUint64(tmp[8:16], i.Lo)
 	e.buffer.Write(tmp[:])
 }
 

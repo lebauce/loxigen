@@ -47,7 +47,7 @@ const (
 	// Identifiers from group ${enum.name}
 ::     for (key, value) in enum.values:
 ::         ident = util.go_ident(key)
-::         if version == OFVersions.VERSION_1_0 and ident.startswith('OFPP_'):
+::         if version == OFVersions.VERSION_1_0 and key.startswith('OFPP_'):
 ::             # HACK loxi converts these to 32-bit
 	${ident} = ${"%#x" % (value & 0xffff)} // ${key}
 ::         else:

@@ -33,40 +33,71 @@
 :: import loxi_globals
 :: import loxi_utils.loxi_utils as loxi_utils
 ::
-func (self *${ofclass.goname}) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+:: var_name = ofclass.goname.lower()
+:: if ofclass.superclass:
+::     superclass = util.go_ident(ofclass.superclass.name)
+func decode${ofclass.goname}(parent *${superclass}, data []byte) (*${ofclass.goname}, error) {
+	${var_name} := &${ofclass.goname}{${superclass}: parent}
+:: else:
+func decode${ofclass.goname}(data []byte) (goloxi.Serializable, error) {
+	${var_name} := &${ofclass.goname}{}
+:: #endif
+	if err := ${var_name}.Decode(data); err != nil {
+		return nil, err
+	}
+
+:: discriminator = ofclass.discriminator
+:: if discriminator and hasattr(discriminator, "values"):
+::     include('_decode_content.go', discriminator=discriminator, offset=base_length,
+::                                   var_name=var_name)
+:: else:
+	return ${var_name}, nil
+:: #endif
+}
+
+::
+func (self *${ofclass.goname}) Decode(data []byte) error {
 :: if base_length:
 	if len(data) < ${base_length} {
-		df.SetTruncated()
-		return errors.New("OpenFlow packet too short")
+		return fmt.Errorf("${ofclass.goname} packet too short: %d < ${base_length}", len(data))
 	}
 
 :: #endif
 
+:: field_length_members = {}
 :: for member in members:
 ::
-::     offset = member.offset - base_offset if member.offset else 0
-::     length = go_gen.oftype.oftype_get_length(ofclass, member, version)
-::
 ::     if type(member) != OFPadMember:
+::
+::         offset = member.offset - base_offset if member.offset else 0
+::         if member.name in field_length_members:
+::             length = "self." + field_length_members[member.name].goname
+::         else:
+::             length = go_gen.oftype.oftype_get_length(ofclass, member, version)
+::         #endif
 ::         member_name = "self." + member.goname
 ::         oftype = go_gen.oftype.lookup_type_data(member.oftype, version)
 ::
 ::         if oftype:
-	${oftype.unserialize.substitute(member=member_name, offset=offset, length=length)}
+::             # if ofclass.goname == "NiciraFlowUpdateFull" and member.name == "match":
+::             #     import pdb; pdb.set_trace()
+::             # #endif
+	${oftype.unserialize.substitute(member=member_name, offset=offset, length=length,
+		                            range=util.emit_range(offset, length=length))}
 ::         elif loxi_utils.oftype_is_list(member.oftype):
 ::             include('_decode_list.go', version=version, member=member,
-::                                        offset=offset, length=length)     
+::                                        offset=offset, length=length)
 ::         else:
 ::             raise Exception("Unhandled member: %s" % (str(member)))
 ::         #endif
+::
+::         if type(member) == OFFieldLengthMember:
+::             field_length_members[member.field_name] = member
+::         #endif
+::
 ::     #endif
 ::
 :: #endfor
-
-:: discriminator = ofclass.discriminator
-:: if discriminator and hasattr(discriminator, "values"):
-::     include('_decode_content.go', discriminator=discriminator, offset=base_length)
-:: #endif
 
 	return nil
 }

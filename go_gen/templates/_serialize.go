@@ -35,6 +35,24 @@
 ::
 
 func (self *${ofclass.goname}) Serialize(encoder *goloxi.Encoder) error {
+:: root = ofclass.inheritance_root()
+:: if root and root.name == "of_header":
+::     for type_member in type_members:
+::         if type_member.name == "type":
+self.Type = ${type_member.value}
+::         #endif
+::     #endfor
+:: #endif
+::
+:: if ofclass.superclass:
+	if err := self.${util.go_ident(ofclass.superclass.name)}.Serialize(encoder); err != nil {
+		return err
+	}
+::     if members:
+
+::     #endif
+:: #endif
+::
 :: for member in members:
 ::     offset = member.offset - base_offset if member.offset else 0
 ::     length = go_gen.oftype.oftype_get_length(ofclass, member, version)
@@ -42,7 +60,11 @@ func (self *${ofclass.goname}) Serialize(encoder *goloxi.Encoder) error {
 ::     if type(member) == OFPadMember:
 	encoder.Write(bytes.Repeat([]byte{0}, ${member.pad_length}))
 ::     else:
-::         member_name = "self." + member.goname
+::         if ofclass.name == "of_header" and member.name == "version":
+::             member_name = version.wire_version
+::         else:
+::             member_name = "self." + member.goname
+::         #endif
 ::         oftype = go_gen.oftype.lookup_type_data(member.oftype, version)
 ::         if oftype:
 	${oftype.serialize.substitute(member=member_name, offset=offset, length=length)}
@@ -53,10 +75,15 @@ func (self *${ofclass.goname}) Serialize(encoder *goloxi.Encoder) error {
 ::         #endif
 ::     #endif
 :: #endfor
+::
+:: length_member = ofclass.length_member
+:: if length_member and not ofclass.virtual:
+::     if length_member.oftype != "uint16_t":
+::         raise Exception("Unhandled length type %s", length_member.oftype)
+::     #endif
 
-:: discriminator = ofclass.discriminator
-:: if discriminator and hasattr(discriminator, "values"):
-::     include('_serialize_content.go', discriminator=discriminator, offset=base_length)
+	// Overwrite length
+	binary.BigEndian.PutUint16(encoder.Bytes()[${length_member.offset}:${length_member.offset+2}], uint16(len(encoder.Bytes())))
 :: #endif
 
 	return nil

@@ -28,17 +28,13 @@
 ::
 :: import go_gen.util as util
 ::
-:: member = "self." + util.go_ident(discriminator.name)
+:: member = var_name + "." + util.go_ident(discriminator.name)
 
 	switch ${member} {
 :: for value, klass in discriminator.values.items():
 	case ${value}:
-		self.Content = &${klass.goname}{}
+		return decode${klass.goname}(${var_name}, data[${offset}:])
 :: #endfor
 	default:
-		return fmt.Errorf("Invalid type '%d'", ${member})
-	}
-
-	if err := self.Content.DecodeFromBytes(data[${offset}:], df); err != nil {
-		return err
+		return nil, fmt.Errorf("Invalid type '%d'", ${member})
 	}

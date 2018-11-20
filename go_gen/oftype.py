@@ -69,28 +69,28 @@ type_data_map = {
 
     'uint128_t': OFTypeData(
         name='uint128',
-        serialize=Template('encoder.PutUint64($member.hi)\nencoder.PutUint64($member.lo)'),
-        unserialize=Template('$member.DecodeFromBytes(data[$offset:$offset+$length], df)')),
+        serialize=Template('encoder.PutUint64($member.Hi)\nencoder.PutUint64($member.Lo)'),
+        unserialize=Template('// $member = binary.BigEndian.Uint128(data[$offset:$offset+16])')),
 
     'of_port_no_t': OFTypeData(
         name='PortNo',
         serialize=Template('$member.Serialize(encoder)'),
-        unserialize=Template('$member.DecodeFromBytes(data[$offset:$offset+$length], df)')),
+        unserialize=Template('$member.Decode(data[$offset:$offset+$length])')),
 
     'of_fm_cmd_t': OFTypeData(
         name='FmCmd',
         serialize=Template('$member.Serialize(encoder)'),
-        unserialize=Template('$member.DecodeFromBytes(data[$offset:$offset+$length], df)')),
+        unserialize=Template('$member.Decode(data[$offset:$offset+$length])')),
 
     'of_wc_bmap_t': OFTypeData(
         name='WcBmap',
         serialize=Template('$member.Serialize(encoder)'),
-        unserialize=Template('$member.DecodeFromBytes(data[$offset:$offset+$length], df)')),
+        unserialize=Template('$member.Decode(data[$offset:$offset+$length])')),
 
     'of_match_bmap_t': OFTypeData(
         name='MatchBmap',
         serialize=Template('$member.Serialize(encoder)'),
-        unserialize=Template('$member.DecodeFromBytes(data[$offset:$offset+$length], df)')),
+        unserialize=Template('$member.Decode(data[$offset:$offset+$length])')),
 
     'of_ipv4_t': OFTypeData(
         name='net.IP',
@@ -115,42 +115,47 @@ type_data_map = {
     'of_bitmap_128_t': OFTypeData(
         name='Bitmap128',
         serialize=Template('$member.Serialize(encoder)'),
-        unserialize=Template('$member.DecodeFromBytes(data[$offset:$offset+$length], df)')),
+        unserialize=Template('$member.Decode(data[$offset:$offset+$length])')),
 
     'of_oxm_t': OFTypeData(
         name='OXM',
         serialize=Template('$member.Serialize(encoder)'),
-        unserialize=Template('$member.DecodeFromBytes(data[$offset:], df)')),
+        unserialize=Template('$member.Decode(data[$offset:])')),
 
     'of_checksum_128_t': OFTypeData(
         name='Checksum128',
         serialize=Template('$member.Serialize(encoder)'),
-        unserialize=Template('$member.DecodeFromBytes(data[$offset:$offset+$length], df)')),
+        unserialize=Template('$member.Decode(data[$offset:$offset+$length])')),
 
     'of_bitmap_512_t': OFTypeData(
         name='Bitmap512',
         serialize=Template('$member.Serialize(encoder)'),
-        unserialize=Template('$member.DecodeFromBytes(data[$offset:$offset+$length], df)')),
+        unserialize=Template('$member.Decode(data[$offset:$offset+$length])')),
 
     'of_time_t': OFTypeData(
         name='Time',
         serialize=Template('$member.Serialize(encoder)'),
-        unserialize=Template('$member.DecodeFromBytes(data[$offset:$offset+$length], df)')),
+        unserialize=Template('$member.Decode(data[$offset:$offset+$length])')),
 
     'of_controller_uri_t': OFTypeData(
         name='ControllerURI',
         serialize=Template('$member.Serialize(encoder)'),
-        unserialize=Template('$member.DecodeFromBytes(data[$offset:$offset+$length], df)')),
+        unserialize=Template('$member.Decode(data[$offset:$offset+$length])')),
 
     'of_controller_status_entry_t': OFTypeData(
         name='ControllerStatusEntry',
         serialize=Template('$member.Serialize(encoder)'),
-        unserialize=Template('$member.DecodeFromBytes(data[$offset:$offset+$length], df)')),
+        unserialize=Template('$member.Decode(data[$offset:$offset+$length])')),
 
     'of_header_t': OFTypeData(
         name='Header',
         serialize=Template('$member.Serialize(encoder)'),
-        unserialize=Template('$member.DecodeFromBytes(data[$offset:$offset+$length], df)')),
+        unserialize=Template('$member.Decode(data[$offset:$offset+$length])')),
+
+    # 'of_nicira_match_t': OFTypeData(
+    #     name='NiciraMatch',
+    #     serialize=Template('$member.Serialize(encoder)'),
+    #     unserialize=Template('$member.Decode(data[$offset:$offset+$length])')),
 }
 
 ## Fixed length strings
@@ -175,6 +180,7 @@ for (cls, length) in fixed_length_strings.items():
 # Map from class name to Golang struct name
 embedded_structs = {
     'of_match_t': 'Match',
+    'of_nicira_match_t': 'NiciraMatch',
     'of_port_desc_t': 'PortDesc',
     'of_meter_features_t': 'MeterFeatures',
     'of_bsn_vport_t': 'BSNVport',
@@ -190,7 +196,7 @@ for (cls, gotype) in embedded_structs.items():
     type_data_map[cls] = OFTypeData(
         name=gotype,
         serialize=Template('if err := $member.Serialize(encoder); err != nil {\n\t\treturn err\n\t}\n'),
-        unserialize=Template('if err := $member.DecodeFromBytes(data[$offset:], df); err != nil {\n\t\treturn err\n\t}\n'))
+        unserialize=Template('if err := $member.Decode(data[$range]); err != nil {\n\t\treturn err\n\t}\n'))
 
 ## Public interface
 

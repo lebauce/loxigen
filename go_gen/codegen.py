@@ -74,8 +74,6 @@ def build_ofclasses(version):
     #         subclasses.append(ofclass)
 
     for ofclass in loxi_globals.ir[version].classes:
-        # if version == loxi_globals.OFVersions.VERSION_1_5 and ofclass.goname == "AggregateStatsRequest":
-        #     import pdb; pdb.set_trace()
         module_name, ofclass.goname = generate_goname(ofclass)
         ofclass.field_lengths = {}
         modules[module_name].append(ofclass)
@@ -104,7 +102,7 @@ def build_ofclasses(version):
             if type(member) == loxi_ir.OFPadMember:
                 ofclass.embedded_length -= member.pad_length
 
-    return modules, superclasses
+    return modules
 
 def codegen(install_dir):
     def render(name, template_name=None, **ctx):
@@ -119,7 +117,7 @@ def codegen(install_dir):
 
     for version in loxi_globals.OFVersions.all_supported:
         subdir = 'of' + version.version.replace('.', '')
-        modules, superclasses = build_ofclasses(version)
+        modules = build_ofclasses(version)
 
         render(os.path.join(subdir, 'types.go'), package=subdir, version=version)
 
@@ -129,4 +127,4 @@ def codegen(install_dir):
         for name, ofclasses in modules.items():
             render(os.path.join(subdir, name + '.go'), template_name='module.go',
                    package=subdir, version=version, ofclasses=ofclasses,
-                   superclasses=superclasses, subdir=subdir)
+                   subdir=subdir)

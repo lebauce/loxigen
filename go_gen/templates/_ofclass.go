@@ -30,48 +30,34 @@
 :: import go_gen.oftype
 :: import go_gen.util as util
 :: import loxi_utils.loxi_utils as loxi_utils
-:: type_members = [m for m in ofclass.members if type(m) == OFTypeMember]
-:: has_content = go_gen.oftype.oftype_has_content(ofclass)
-::
-:: if ofclass.name == "of_bsn_header":
-::     import pdb; pdb.set_trace()
-:: #endif
 ::
 type ${ofclass.goname} struct {
-:: for m in ofclass.unherited_members:
-::     if type(m) != OFPadMember:
-::         if ofclass.superclass and ofclass.superclass.member_by_name(m.name):
+:: # Embed superclass
+:: if ofclass.superclass:
+	*${util.go_ident(ofclass.superclass.name)}
+:: #endif
+::
+:: # Create struct properties
+:: for member in ofclass.unherited_members:
+::     if type(member) != OFPadMember:
+::         if ofclass.superclass and ofclass.superclass.member_by_name(member.name):
 ::             continue
 ::         #endif
-::         oftype = go_gen.oftype.lookup_type_data(m.oftype, version)
-::             if not oftype and loxi_utils.oftype_is_list(m.oftype):
-::                 oftype = "[]" + util.go_ident(loxi_utils.oftype_list_elem(m.oftype))
-::             elif oftype != None:
-::                 oftype = oftype.name
-::             else:
-::                 raise Exception("Could not determine type for %s" % (m.name,))
-::             #endif
-	${m.goname} ${oftype}
+::
+::         oftype = go_gen.oftype.lookup_type_data(member.oftype, version)
+::         if not oftype and loxi_utils.oftype_is_list(member.oftype):
+::             oftype = "[]goloxi.Serializable" # util.go_ident(loxi_utils.oftype_list_elem(member.oftype))
+::         elif oftype != None:
+::             oftype = oftype.name
+::         else:
+::             raise Exception("Could not determine type for %s in %s" % (member.name, ofclass.name))
+::         #endif
+::
+	${member.goname} ${oftype}
 ::     #endif
 :: #endfor
-::
-:: if has_content:
-	Content goloxi.Serializable
-:: #endif
 }
-::
-:: if ofclass.superclass and ofclass.superclass.name == "of_header":
-::     for type_member in type_members:
-::         if type_member.name == "type":
 
-func (self *${ofclass.goname}) MessageType() uint8 {
-	return ${type_member.value}
-}
-::         #endif
-::     #endfor
-:: #endif
-::
-::
 :: base_length = ofclass.embedded_length
 :: base_offset = 0
 :: for member in ofclass.unherited_members:
@@ -85,6 +71,11 @@ func (self *${ofclass.goname}) MessageType() uint8 {
 ::     base_length -= (base_offset if len(ofclass.unherited_members) else ofclass.superclass.embedded_length)
 :: #endif
 ::
-:: include('_serialize.go', ofclass=ofclass, members=ofclass.unherited_members, base_length=base_length, base_offset=base_offset)
+:: type_members = [m for m in ofclass.unherited_members if type(m) == OFTypeMember]
+::
+:: include('_serialize.go', ofclass=ofclass, members=ofclass.unherited_members, type_members=type_members,
+::                          base_length=base_length, base_offset=base_offset)
 
 :: include('_decode.go', ofclass=ofclass, members=ofclass.unherited_members, base_length=base_length, base_offset=base_offset)
+::
+:: include('_constructor.go', ofclass=ofclass, type_members=type_members)

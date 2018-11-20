@@ -39,10 +39,7 @@ import (
 :: if version.wire_version >= 3:
 type OXM = Oxm
 :: #endif
-type uint128 struct {
-	hi uint64
-	lo uint64
-}
+type uint128 = goloxi.Uint128
 type Checksum128 [16]byte
 type Bitmap128 uint128
 type Bitmap512 struct {
@@ -52,9 +49,13 @@ type Unimplemented struct {}
 type BSNVport uint16
 type ControllerURI uint16
 
+func (h *Header) MessageType() uint8 {
+	return h.Type
+}
+
 :: fake_types = ["Checksum128", "Bitmap128", "Bitmap512", "BSNVport", "ControllerURI"]
 :: for fake_type in fake_types:
-func (self *${fake_type}) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+func (self *${fake_type}) Decode(data []byte) error {
 	return nil
 }
 
@@ -85,7 +86,7 @@ func (self *${goname}) Serialize(encoder *goloxi.Encoder) error {
 	return nil
 }
 
-func (self *${goname}) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+func (self *${goname}) Decode(data []byte) error {
 ::                 if base_type == "uint8":
 	*self = ${goname}(data[0])
 ::                 else:
@@ -99,3 +100,12 @@ type ${goname} = ${gotype}
 ::         #endif
 ::     #endif
 :: #endfor
+
+func DecodeMessage(data []byte) (goloxi.Message, error) {
+	header, err := decodeHeader(data)
+	if err != nil {
+		return nil, err
+	}
+
+	return header.(goloxi.Message), nil
+}

@@ -26,28 +26,31 @@
 :: # EPL for the specific language governing permissions and limitations
 :: # under the EPL.
 ::
-:: from loxi_globals import OFVersions
-:: import py_gen.oftype
-:: include('_copyright.go')
+:: from loxi_ir import *
+:: import go_gen.oftype
+:: import go_gen.util as util
+:: import loxi_utils.loxi_utils as loxi_utils
 
-:: include('_autogen.go')
-
-package ${package}
-
-import (
-	"bytes"
-	"encoding/binary"
-	"fmt"
-	"net"
-
-	"github.com/google/gopacket"
-	"github.com/skydive-project/goloxi"
-)
-
-:: for i, ofclass in enumerate(ofclasses):
-::     if i != 0:
-
+:: param = ""
+:: if ofclass.discriminator:
+::     param = "_" + ofclass.discriminator.name + " "
+::     if ofclass.discriminator.oftype.startswith("of_"):
+::         param += util.go_ident(ofclass.discriminator.oftype[:-2])
+::     else:
+::         param += ofclass.discriminator.oftype[:-2]
 ::     #endif
-:: include('_ofclass.go', ofclass=ofclass)
-::
-:: #endfor
+:: #endif
+func New${ofclass.goname}(${param}) *${ofclass.goname} {
+	return &${ofclass.goname}{
+:: if ofclass.discriminator:
+	${ofclass.discriminator.goname}: _${ofclass.discriminator.name},
+:: #endif
+:: if ofclass.superclass:
+::     member = ""
+::     if ofclass.superclass.discriminator:
+::         member = ofclass.member_by_name(ofclass.superclass.discriminator.name)
+	${ofclass.superclass.goname}: New${ofclass.superclass.goname}(${member.value}),
+::     #endif
+:: #endif
+	}
+}
