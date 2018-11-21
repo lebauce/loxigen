@@ -33,8 +33,8 @@
 	switch ${member} {
 :: for value, klass in discriminator.values.items():
 	case ${value}:
-		return decode${klass.goname}(${var_name}, data[${offset}:])
+		return decode${klass.goname}(${var_name}, decoder)
 :: #endfor
 	default:
-		return nil, fmt.Errorf("Invalid type '%d'", ${member})
+		return nil, fmt.Errorf("Invalid type '%d' for '${ofclass.goname}'", ${member})
 	}

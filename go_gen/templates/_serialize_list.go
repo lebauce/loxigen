@@ -26,7 +26,6 @@
 :: # EPL for the specific language governing permissions and limitations
 :: # under the EPL.
 ::
-
 	for _, obj := range self.${member.goname} {
 		if err := obj.Serialize(encoder); err != nil {
 			return err

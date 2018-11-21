@@ -36,19 +36,19 @@
 :: var_name = ofclass.goname.lower()
 :: if ofclass.superclass:
 ::     superclass = util.go_ident(ofclass.superclass.name)
-func decode${ofclass.goname}(parent *${superclass}, data []byte) (*${ofclass.goname}, error) {
+func decode${ofclass.goname}(parent *${superclass}, decoder *goloxi.Decoder) (goloxi.Serializable, error) {
 	${var_name} := &${ofclass.goname}{${superclass}: parent}
 :: else:
-func decode${ofclass.goname}(data []byte) (goloxi.Serializable, error) {
+func decode${ofclass.goname}(decoder *goloxi.Decoder) (goloxi.Serializable, error) {
 	${var_name} := &${ofclass.goname}{}
 :: #endif
-	if err := ${var_name}.Decode(data); err != nil {
+	if err := ${var_name}.Decode(decoder); err != nil {
 		return nil, err
 	}
 
 :: discriminator = ofclass.discriminator
 :: if discriminator and hasattr(discriminator, "values"):
-::     include('_decode_content.go', discriminator=discriminator, offset=base_length,
+::     include('_decode_content.go', discriminator=discriminator,
 ::                                   var_name=var_name)
 :: else:
 	return ${var_name}, nil
@@ -56,48 +56,66 @@ func decode${ofclass.goname}(data []byte) (goloxi.Serializable, error) {
 }
 
 ::
-func (self *${ofclass.goname}) Decode(data []byte) error {
+func (self *${ofclass.goname}) Decode(decoder *goloxi.Decoder) error {
 :: if base_length:
-	if len(data) < ${base_length} {
-		return fmt.Errorf("${ofclass.goname} packet too short: %d < ${base_length}", len(data))
+	if decoder.Length() < ${base_length} {
+		return fmt.Errorf("${ofclass.goname} packet too short: %d < ${base_length}", decoder.Length())
 	}
 
 :: #endif
 
 :: field_length_members = {}
 :: for member in members:
+::     decoder_expr = 'decoder'
 ::
-::     if type(member) != OFPadMember:
-::
-::         offset = member.offset - base_offset if member.offset else 0
-::         if member.name in field_length_members:
-::             length = "self." + field_length_members[member.name].goname
-::         else:
-::             length = go_gen.oftype.oftype_get_length(ofclass, member, version)
-::         #endif
+::     if type(member) == OFPadMember:
+	decoder.Skip(${member.pad_length})
+::     else:
 ::         member_name = "self." + member.goname
 ::         oftype = go_gen.oftype.lookup_type_data(member.oftype, version)
 ::
+::         if type(member) == OFDataMember or type(member) == OFDiscriminatorMember:
+::             if member.name in field_length_members:
+::                 decoder_expr = 'decoder.SliceDecoder(int(self.%s), 0)' % field_length_members[member.name].goname
+::             else:
+::                 decoder_expr = 'decoder'
+::             #endif
+::         #endif
+::
 ::         if oftype:
-::             # if ofclass.goname == "NiciraFlowUpdateFull" and member.name == "match":
+	${oftype.unserialize.substitute(member=member_name, decoder=decoder_expr)}
+::             # if ofclass.name == "of_nicira_flow_update_full_add" and member.name == "match":
 ::             #     import pdb; pdb.set_trace()
 ::             # #endif
-	${oftype.unserialize.substitute(member=member_name, offset=offset, length=length,
-		                            range=util.emit_range(offset, length=length))}
+::             klass = go_gen.oftype.oftype_get_class(member.oftype, version)
+::             if klass and hasattr(klass, "params") and klass.params.get("align", 0):
+	decoder.SkipAlign()
+::             #endif
 ::         elif loxi_utils.oftype_is_list(member.oftype):
-::             include('_decode_list.go', version=version, member=member,
-::                                        offset=offset, length=length)
+::             include('_decode_list.go', version=version, member=member)
 ::         else:
 ::             raise Exception("Unhandled member: %s" % (str(member)))
 ::         #endif
 ::
-::         if type(member) == OFFieldLengthMember:
+::         if type(member) == OFTypeMember:
+	// if ${member_name} != ${member.value} {
+	// 	return fmt.Errorf("Wrong value '%d' for type, expected '${member.value}'.", ${member_name})
+	// }
+::         elif type(member) == OFLengthMember:
+	decoder = decoder.SliceDecoder(int(${member_name}), ${member.length} + ${member.offset})
+::         elif type(member) == OFFieldLengthMember:
 ::             field_length_members[member.field_name] = member
 ::         #endif
 ::
 ::     #endif
 ::
 :: #endfor
+::
+:: if ofclass.has_external_alignment:
+
+	decoder.SkipAlign()
+
+:: #endif
 
 	return nil
 }

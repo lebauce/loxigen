@@ -35,12 +35,10 @@
 :: elem_length = member_ofclass.base_length
 :: elem_type = util.go_ident(loxi_utils.oftype_list_elem(member.oftype))
 
-	for buffer := data[${util.emit_range(offset, length)}]; len(buffer) > ${elem_length}; {
-		obj, err := decode${elem_type}(buffer)
+	for decoder.Length() >= ${elem_length} {
+		obj, err := decode${elem_type}(decoder)
 		if err != nil {
 			return err
 		}
 		self.${member.goname} = append(self.${member.goname}, obj)
-		buffer = buffer[${elem_length}:]
 	}
-	data = data[${util.emit_range(offset)}]

@@ -55,7 +55,7 @@ func (h *Header) MessageType() uint8 {
 
 :: fake_types = ["Checksum128", "Bitmap128", "Bitmap512", "BSNVport", "ControllerURI"]
 :: for fake_type in fake_types:
-func (self *${fake_type}) Decode(data []byte) error {
+func (self *${fake_type}) Decode(decoder *goloxi.Decoder) error {
 	return nil
 }
 
@@ -86,12 +86,8 @@ func (self *${goname}) Serialize(encoder *goloxi.Encoder) error {
 	return nil
 }
 
-func (self *${goname}) Decode(data []byte) error {
-::                 if base_type == "uint8":
-	*self = ${goname}(data[0])
-::                 else:
-	*self = ${goname}(binary.BigEndian.${util.go_ident(gotype)}(data[:]))
-::                 #endif
+func (self *${goname}) Decode(decoder *goloxi.Decoder) error {
+	*self = ${goname}(decoder.Read${util.go_ident(gotype)}())
 	return nil
 }
 ::             else:
@@ -102,7 +98,7 @@ type ${goname} = ${gotype}
 :: #endfor
 
 func DecodeMessage(data []byte) (goloxi.Message, error) {
-	header, err := decodeHeader(data)
+	header, err := decodeHeader(goloxi.NewDecoder(data))
 	if err != nil {
 		return nil, err
 	}

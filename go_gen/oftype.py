@@ -45,117 +45,112 @@ type_data_map = {
     'char': OFTypeData(
         name='byte',
         serialize=Template('encoder.PutChar($member)'),
-        unserialize=Template('$member = data[$offset]')),
+        unserialize=Template('$member = $decoder.ReadChar()')),
 
     'uint8_t': OFTypeData(
         name='uint8',
         serialize=Template('encoder.PutUint8($member)'),
-        unserialize=Template('$member = data[$offset]')),
+        unserialize=Template('$member = $decoder.ReadByte()')),
 
     'uint16_t': OFTypeData(
         name='uint16',
         serialize=Template('encoder.PutUint16($member)'),
-        unserialize=Template('$member = binary.BigEndian.Uint16(data[$offset:$offset+2])')),
+        unserialize=Template('$member = $decoder.ReadUint16()')),
 
     'uint32_t': OFTypeData(
         name='uint32',
         serialize=Template('encoder.PutUint32($member)'),
-        unserialize=Template('$member = binary.BigEndian.Uint32(data[$offset:$offset+4])')),
+        unserialize=Template('$member = $decoder.ReadUint32()')),
 
     'uint64_t': OFTypeData(
         name='uint64',
         serialize=Template('encoder.PutUint64($member)'),
-        unserialize=Template('$member = binary.BigEndian.Uint64(data[$offset:$offset+8])')),
+        unserialize=Template('$member = $decoder.ReadUint64()')),
 
     'uint128_t': OFTypeData(
         name='uint128',
-        serialize=Template('encoder.PutUint64($member.Hi)\nencoder.PutUint64($member.Lo)'),
-        unserialize=Template('// $member = binary.BigEndian.Uint128(data[$offset:$offset+16])')),
+        serialize=Template('encoder.PutUint128($member.Hi)'),
+        unserialize=Template('$member = $decoder.ReadUint128()')),
 
     'of_port_no_t': OFTypeData(
         name='PortNo',
         serialize=Template('$member.Serialize(encoder)'),
-        unserialize=Template('$member.Decode(data[$offset:$offset+$length])')),
+        unserialize=Template('$member.Decode($decoder)')),
 
     'of_fm_cmd_t': OFTypeData(
         name='FmCmd',
         serialize=Template('$member.Serialize(encoder)'),
-        unserialize=Template('$member.Decode(data[$offset:$offset+$length])')),
+        unserialize=Template('$member.Decode($decoder)')),
 
     'of_wc_bmap_t': OFTypeData(
         name='WcBmap',
         serialize=Template('$member.Serialize(encoder)'),
-        unserialize=Template('$member.Decode(data[$offset:$offset+$length])')),
+        unserialize=Template('$member.Decode($decoder)')),
 
     'of_match_bmap_t': OFTypeData(
         name='MatchBmap',
         serialize=Template('$member.Serialize(encoder)'),
-        unserialize=Template('$member.Decode(data[$offset:$offset+$length])')),
+        unserialize=Template('$member.Decode($decoder)')),
 
     'of_ipv4_t': OFTypeData(
         name='net.IP',
         serialize=Template('encoder.Write($member.To4())'),
-        unserialize=Template('$member = net.IP(data[$offset:$offset+4])')),
+        unserialize=Template('$member = net.IP($decoder.Read(4))')),
 
     'of_ipv6_t': OFTypeData(
         name='net.IP',
         serialize=Template('encoder.Write($member.To16())'),
-        unserialize=Template("$member = net.IP(data[$offset:$offset+16])")),
+        unserialize=Template('$member = net.IP($decoder.Read(16))')),
 
     'of_mac_addr_t': OFTypeData(
         name='net.HardwareAddr',
         serialize=Template('encoder.Write($member)'),
-        unserialize=Template("$member = net.HardwareAddr(data[$offset:$offset+6])")),
+        unserialize=Template("$member = net.HardwareAddr($decoder.Read(6))")),
 
     'of_octets_t': OFTypeData(
         name='[]byte',
         serialize=Template('encoder.Write($member)'),
-        unserialize=Template('copy($member, data[$offset:])')),
+        unserialize=Template("$member = $decoder.Read($decoder.Length())")),
 
     'of_bitmap_128_t': OFTypeData(
         name='Bitmap128',
         serialize=Template('$member.Serialize(encoder)'),
-        unserialize=Template('$member.Decode(data[$offset:$offset+$length])')),
+        unserialize=Template('$member.Decode($decoder)')),
 
     'of_oxm_t': OFTypeData(
         name='OXM',
         serialize=Template('$member.Serialize(encoder)'),
-        unserialize=Template('$member.Decode(data[$offset:])')),
+        unserialize=Template('$member.Decode($decoder)')),
 
     'of_checksum_128_t': OFTypeData(
         name='Checksum128',
         serialize=Template('$member.Serialize(encoder)'),
-        unserialize=Template('$member.Decode(data[$offset:$offset+$length])')),
+        unserialize=Template('$member.Decode($decoder)')),
 
     'of_bitmap_512_t': OFTypeData(
         name='Bitmap512',
         serialize=Template('$member.Serialize(encoder)'),
-        unserialize=Template('$member.Decode(data[$offset:$offset+$length])')),
+        unserialize=Template('$member.Decode($decoder)')),
 
     'of_time_t': OFTypeData(
         name='Time',
         serialize=Template('$member.Serialize(encoder)'),
-        unserialize=Template('$member.Decode(data[$offset:$offset+$length])')),
+        unserialize=Template('$member.Decode($decoder)')),
 
     'of_controller_uri_t': OFTypeData(
         name='ControllerURI',
         serialize=Template('$member.Serialize(encoder)'),
-        unserialize=Template('$member.Decode(data[$offset:$offset+$length])')),
+        unserialize=Template('$member.Decode($decoder)')),
 
     'of_controller_status_entry_t': OFTypeData(
         name='ControllerStatusEntry',
         serialize=Template('$member.Serialize(encoder)'),
-        unserialize=Template('$member.Decode(data[$offset:$offset+$length])')),
+        unserialize=Template('$member.Decode($decoder)')),
 
     'of_header_t': OFTypeData(
         name='Header',
         serialize=Template('$member.Serialize(encoder)'),
-        unserialize=Template('$member.Decode(data[$offset:$offset+$length])')),
-
-    # 'of_nicira_match_t': OFTypeData(
-    #     name='NiciraMatch',
-    #     serialize=Template('$member.Serialize(encoder)'),
-    #     unserialize=Template('$member.Decode(data[$offset:$offset+$length])')),
+        unserialize=Template('$member.Decode($decoder)')),
 }
 
 ## Fixed length strings
@@ -173,7 +168,7 @@ for (cls, length) in fixed_length_strings.items():
     type_data_map[cls] = OFTypeData(
         name="string",
         serialize=Template('encoder.Write([]byte($member))'),
-        unserialize=Template('$member = string(bytes.Trim(data[$offset:$offset+%d], "\\x00"))' % length))
+        unserialize=Template('$member = string(bytes.Trim($decoder.Read(%d), "\\x00"))' % length))
 
 ## Embedded structs
 
@@ -196,7 +191,7 @@ for (cls, gotype) in embedded_structs.items():
     type_data_map[cls] = OFTypeData(
         name=gotype,
         serialize=Template('if err := $member.Serialize(encoder); err != nil {\n\t\treturn err\n\t}\n'),
-        unserialize=Template('if err := $member.Decode(data[$range]); err != nil {\n\t\treturn err\n\t}\n'))
+        unserialize=Template('if err := $member.Decode($decoder); err != nil {\n\t\treturn err\n\t}\n'))
 
 ## Public interface
 
@@ -220,6 +215,13 @@ def oftype_has_content(ofclass):
                     continue
             return True
     return False
+
+def oftype_get_class(oftype, version):
+    if oftype in ir_offset.of_mixed_types:
+        oftype = ir_offset.of_mixed_types[oftype][version.wire_version]
+
+    oftype = oftype[:-2]
+    return loxi_globals.ir[version].class_by_name(oftype)
 
 def oftype_get_length(ofclass, member, version):
     if member.is_fixed_length:

@@ -54,9 +54,6 @@ self.Type = ${type_member.value}
 :: #endif
 ::
 :: for member in members:
-::     offset = member.offset - base_offset if member.offset else 0
-::     length = go_gen.oftype.oftype_get_length(ofclass, member, version)
-::
 ::     if type(member) == OFPadMember:
 	encoder.Write(bytes.Repeat([]byte{0}, ${member.pad_length}))
 ::     else:
@@ -67,7 +64,7 @@ self.Type = ${type_member.value}
 ::         #endif
 ::         oftype = go_gen.oftype.lookup_type_data(member.oftype, version)
 ::         if oftype:
-	${oftype.serialize.substitute(member=member_name, offset=offset, length=length)}
+	${oftype.serialize.substitute(member=member_name)}
 ::         elif loxi_utils.oftype_is_list(member.oftype):
 ::             include('_serialize_list.go', member=member)
 ::         else:

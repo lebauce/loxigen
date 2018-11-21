@@ -74,7 +74,7 @@ type ${ofclass.goname} struct {
 :: type_members = [m for m in ofclass.unherited_members if type(m) == OFTypeMember]
 ::
 :: include('_serialize.go', ofclass=ofclass, members=ofclass.unherited_members, type_members=type_members,
-::                          base_length=base_length, base_offset=base_offset)
+::                          base_length=base_length)
 
 :: include('_decode.go', ofclass=ofclass, members=ofclass.unherited_members, base_length=base_length, base_offset=base_offset)
 ::

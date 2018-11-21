@@ -59,6 +59,8 @@ def oftype_unherited_members(ofclass):
             continue
         if hasattr(member, "oftype") and member.oftype == "of_octets_t" and ofclass.discriminator and i == len(ofclass.members) - 1:
             continue
+        if type(member) == loxi_ir.OFPadMember and i == len(ofclass.members) - 1:
+            continue
         unherited.append(member)
     return unherited
 
@@ -68,17 +70,12 @@ def build_ofclasses(version):
     field_lengths = {}
     modules = defaultdict(list)
 
-    # for ofclass in loxi_globals.ir[version].classes:
-    #     if ofclass.superclass:
-    #         subclasses = ofclass.superclass.__dict__.setdefault("subclasses", [])
-    #         subclasses.append(ofclass)
-
     for ofclass in loxi_globals.ir[version].classes:
         module_name, ofclass.goname = generate_goname(ofclass)
         ofclass.field_lengths = {}
         modules[module_name].append(ofclass)
         offset = 0
-        for m in ofclass.members:
+        for i, m in enumerate(ofclass.members):
             if type(m) != loxi_ir.OFPadMember:
                 m.goname = util.go_ident(m.name)
                 if type(m) == loxi_ir.OFTypeMember and ofclass.superclass:
@@ -90,9 +87,9 @@ def build_ofclasses(version):
                         continue
                     discriminator_values = member.__dict__.setdefault("values", {})
                     discriminator_values[m.value] = ofclass
-
-            if type(m) == loxi_ir.OFFieldLengthMember:
-                ofclass.field_lengths[m.name] = m.field_name
+            
+                if type(m) == loxi_ir.OFFieldLengthMember:
+                    ofclass.field_lengths[m.name] = m.field_name
 
         ofclass.unherited_members = oftype_unherited_members(ofclass)
 
@@ -114,6 +111,8 @@ def codegen(install_dir):
         subprocess.call(["goimports", "-w", os.path.join(install_dir, name)])
 
     render('globals.go', versions=loxi_globals.OFVersions.all_supported)
+    render('encoder.go')
+    render('decoder.go')
 
     for version in loxi_globals.OFVersions.all_supported:
         subdir = 'of' + version.version.replace('.', '')
